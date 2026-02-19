@@ -31,3 +31,26 @@ class Comment(models.Model):
 
     def __str__(self):
         return f"Comment by {self.author.username} on post {self.post_id}"
+
+
+class CommentLike(models.Model):
+    """A like on a comment. One user can like a comment only once."""
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='comment_likes',
+    )
+    comment = models.ForeignKey(
+        'Comment',
+        on_delete=models.CASCADE,
+        related_name='likes',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'comment'], name='unique_user_comment_like'),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} likes comment {self.comment_id}"
