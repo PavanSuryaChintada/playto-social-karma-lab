@@ -1,5 +1,14 @@
 # EXPLAINER
 
+## Deployment (Live)
+
+- **Backend API:** [https://playto-social-karma-lab.onrender.com](https://playto-social-karma-lab.onrender.com) (Render)
+- **Frontend:** [https://playto-social-karma-lab.vercel.app/](https://playto-social-karma-lab.vercel.app/) (Vercel)
+
+See `README.md` for detailed deployment steps and environment variables.
+
+---
+
 ## The Tree
 
 ### Data model for nested comments
