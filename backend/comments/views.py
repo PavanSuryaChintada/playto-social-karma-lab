@@ -4,8 +4,11 @@ from rest_framework.decorators import action
 from rest_framework import mixins, permissions, viewsets
 from rest_framework.response import Response
 
+from karma.models import KarmaEvent, SOURCE_COMMENT_LIKE
 from .models import Comment, CommentLike
 from .serializers import CommentSerializer
+
+COMMENT_LIKE_KARMA_POINTS = 1
 
 
 class CommentViewSet(
@@ -36,7 +39,15 @@ class CommentViewSet(
         comment = self.get_object()
         try:
             with transaction.atomic():
-                _, created = CommentLike.objects.get_or_create(user=request.user, comment=comment)
+                comment_like, created = CommentLike.objects.get_or_create(user=request.user, comment=comment)
+                if created:
+                    KarmaEvent.objects.create(
+                        recipient=comment.author,
+                        actor=request.user,
+                        source_type=SOURCE_COMMENT_LIKE,
+                        points=COMMENT_LIKE_KARMA_POINTS,
+                        source_comment_like=comment_like,
+                    )
         except IntegrityError:
             created = False
 

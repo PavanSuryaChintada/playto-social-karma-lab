@@ -7,8 +7,11 @@ from rest_framework.response import Response
 from comments.models import Comment
 from comments.serializers import CommentTreeSerializer
 from comments.utils import build_comment_tree
+from karma.models import KarmaEvent, SOURCE_POST_LIKE
 from .models import Post, PostLike
 from .serializers import PostSerializer
+
+POST_LIKE_KARMA_POINTS = 5
 
 
 class PostViewSet(
@@ -51,7 +54,15 @@ class PostViewSet(
 
         try:
             with transaction.atomic():
-                _, created = PostLike.objects.get_or_create(user=request.user, post=post)
+                post_like, created = PostLike.objects.get_or_create(user=request.user, post=post)
+                if created:
+                    KarmaEvent.objects.create(
+                        recipient=post.author,
+                        actor=request.user,
+                        source_type=SOURCE_POST_LIKE,
+                        points=POST_LIKE_KARMA_POINTS,
+                        source_post_like=post_like,
+                    )
         except IntegrityError:
             # Race-safe fallback: if concurrent insert happened, treat as already liked.
             created = False
