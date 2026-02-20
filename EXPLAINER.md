@@ -7,6 +7,16 @@
 
 See `README.md` for detailed deployment steps and environment variables.
 
+## Test Accounts
+
+Use these accounts to log in and explore the live demo (password for all: `SamplePass123!`):
+
+- **alice** (alice@example.com)
+- **bob** (bob@example.com)
+- **carol** (carol@example.com)
+- **dave** (dave@example.com)
+- **eve** (eve@example.com)
+
 ---
 
 ## The Tree
