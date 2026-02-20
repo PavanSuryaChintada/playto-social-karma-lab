@@ -1,4 +1,4 @@
-from django.db.models import Count
+from django.db.models import Count, Exists, OuterRef, Value, BooleanField
 from django.db import IntegrityError, transaction
 from rest_framework.decorators import action
 from rest_framework import mixins, permissions, viewsets
@@ -25,8 +25,17 @@ class CommentViewSet(
             Comment.objects
             .select_related('author', 'post', 'parent')
             .annotate(like_count=Count('likes', distinct=True))
+            .annotate(reply_count=Count('replies', distinct=True))
             .order_by('created_at')
         )
+        if self.request.user.is_authenticated:
+            user_liked_subquery = CommentLike.objects.filter(
+                user=self.request.user,
+                comment_id=OuterRef('pk'),
+            )
+            queryset = queryset.annotate(is_liked_by_me=Exists(user_liked_subquery))
+        else:
+            queryset = queryset.annotate(is_liked_by_me=Value(False, output_field=BooleanField()))
         post_id = self.request.query_params.get('post')
         if post_id:
             queryset = queryset.filter(post_id=post_id)

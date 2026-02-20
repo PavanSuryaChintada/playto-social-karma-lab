@@ -1,11 +1,11 @@
 from django.db import IntegrityError, transaction
-from django.db.models import Count
+from django.db.models import Count, Exists, OuterRef, Value, BooleanField
 from rest_framework.decorators import action
 from rest_framework import mixins, permissions, viewsets
 from rest_framework.response import Response
 from rest_framework import status
 
-from comments.models import Comment
+from comments.models import Comment, CommentLike
 from comments.serializers import CommentTreeSerializer
 from comments.utils import build_comment_tree
 from karma.models import KarmaEvent, SOURCE_POST_LIKE
@@ -25,12 +25,22 @@ class PostViewSet(
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     def get_queryset(self):
-        return (
+        queryset = (
             Post.objects
             .select_related('author')
             .annotate(like_count=Count('likes', distinct=True))
+            .annotate(comment_count=Count('comments', distinct=True))
             .order_by('-created_at')
         )
+        if self.request.user.is_authenticated:
+            user_liked_subquery = PostLike.objects.filter(
+                user=self.request.user,
+                post_id=OuterRef('pk'),
+            )
+            queryset = queryset.annotate(is_liked_by_me=Exists(user_liked_subquery))
+        else:
+            queryset = queryset.annotate(is_liked_by_me=Value(False, output_field=BooleanField()))
+        return queryset
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
@@ -38,13 +48,24 @@ class PostViewSet(
     @action(detail=True, methods=['get'], url_path='comments/tree')
     def comments_tree(self, request, pk=None):
         post = self.get_object()
-        comments = list(
+        comments_queryset = (
             Comment.objects
             .filter(post=post)
             .select_related('author', 'parent')
             .annotate(like_count=Count('likes', distinct=True))
             .order_by('created_at')
         )
+        if request.user.is_authenticated:
+            user_liked_subquery = CommentLike.objects.filter(
+                user=request.user,
+                comment_id=OuterRef('pk'),
+            )
+            comments_queryset = comments_queryset.annotate(is_liked_by_me=Exists(user_liked_subquery))
+        else:
+            comments_queryset = comments_queryset.annotate(
+                is_liked_by_me=Value(False, output_field=BooleanField())
+            )
+        comments = list(comments_queryset)
         roots = build_comment_tree(comments)
         serializer = CommentTreeSerializer(roots, many=True, context={'request': request})
         return Response(serializer.data)

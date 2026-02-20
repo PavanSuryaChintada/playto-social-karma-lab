@@ -52,9 +52,9 @@ class KarmaEvent(models.Model):
             models.Index(fields=['recipient', 'created_at']),
         ]
         constraints = [
-            models.CheckConstraint(check=Q(points__gt=0), name='karma_points_gt_zero'),
+            models.CheckConstraint(condition=Q(points__gt=0), name='karma_points_gt_zero'),
             models.CheckConstraint(
-                check=(
+                condition=(
                     (Q(source_type='post_like') & Q(source_post_like__isnull=False) & Q(source_comment_like__isnull=True))
                     | (Q(source_type='comment_like') & Q(source_comment_like__isnull=False) & Q(source_post_like__isnull=True))
                 ),
