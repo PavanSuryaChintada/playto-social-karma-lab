@@ -41,41 +41,48 @@ function CommentNode({ comment, onLikeComment, onReply, canWrite }) {
   }
 
   return (
-    <div className="mt-2 rounded-md border border-slate-200 bg-slate-50 p-3">
-      <div className="text-sm text-slate-800">
-        <span className="font-semibold">{comment.author_username}</span>: {comment.content}
-      </div>
-      <div className="mt-2 flex items-center gap-3 text-xs text-slate-600">
-        <span>Likes: {comment.like_count}</span>
-        <button
-          className="rounded bg-indigo-600 px-2 py-1 text-white hover:bg-indigo-700"
-          onClick={() => onLikeComment(comment.id, comment.is_liked_by_me)}
-        >
-          {comment.is_liked_by_me ? "Unlike" : "Like"}
-        </button>
-        <button
-          className="rounded bg-slate-700 px-2 py-1 text-white hover:bg-slate-800"
-          disabled={!canWrite}
-          onClick={() => setReplyOpen((prev) => !prev)}
-        >
-          Reply
-        </button>
-      </div>
-      {replyOpen && (
-        <form className="mt-2 flex gap-2" onSubmit={submitReply}>
-          <input
-            className="w-full rounded border border-slate-300 p-1 text-sm"
-            placeholder="Write a reply..."
-            value={replyText}
-            onChange={(e) => setReplyText(e.target.value)}
-          />
-          <button className="rounded bg-emerald-600 px-2 py-1 text-xs text-white hover:bg-emerald-700" type="submit">
-            Send
+    <div className="relative mt-3 ml-4 pl-4 border-l-2 border-white/10 border-l-indigo-500/40 hover:border-l-indigo-400/60 transition-all duration-300">
+      <div className="rounded-lg border border-white/10 bg-slate-800/50 p-3 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-[1.01]">
+        <div className="text-sm text-slate-200">
+          <span className="font-semibold text-indigo-300">{comment.author_username}</span>
+          <span className="text-slate-400"> · </span>
+          <span>{comment.content}</span>
+        </div>
+        <div className="mt-2 flex items-center gap-3 text-xs text-slate-400">
+          <span>Likes: {comment.like_count}</span>
+          <button
+            className="rounded-md bg-indigo-600/80 px-2 py-1 text-white hover:bg-indigo-500 transition-all duration-300 hover:scale-105"
+            onClick={() => onLikeComment(comment.id, comment.is_liked_by_me)}
+          >
+            {comment.is_liked_by_me ? "Unlike" : "Like"}
           </button>
-        </form>
-      )}
+          <button
+            className="rounded-md bg-slate-700/80 px-2 py-1 text-slate-200 hover:bg-slate-600 transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={!canWrite}
+            onClick={() => setReplyOpen((prev) => !prev)}
+          >
+            Reply
+          </button>
+        </div>
+        {replyOpen && (
+          <form className="mt-3 flex gap-2" onSubmit={submitReply}>
+            <input
+              className="w-full rounded-md border border-white/10 bg-slate-900/80 p-2 text-sm text-slate-200 placeholder-slate-500 focus:border-indigo-500/50 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
+              placeholder="Write a reply..."
+              value={replyText}
+              onChange={(e) => setReplyText(e.target.value)}
+            />
+            <button
+              className="rounded-md bg-emerald-600/80 px-3 py-1.5 text-xs text-white hover:bg-emerald-500 transition-all duration-300 hover:scale-105"
+              type="submit"
+            >
+              Send
+            </button>
+          </form>
+        )}
+      </div>
       {comment.replies?.length > 0 && (
-        <div className="ml-4 mt-3 border-l border-slate-300 pl-3">
+        <div className="mt-2">
           {comment.replies.map((child) => (
             <CommentNode
               key={child.id}
@@ -101,6 +108,7 @@ export default function App() {
   const [newCommentByPost, setNewCommentByPost] = useState({});
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [authDropdownOpen, setAuthDropdownOpen] = useState(false);
 
   const canWrite = useMemo(() => auth.username && auth.password, [auth]);
 
@@ -208,153 +216,217 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 p-4 md:p-8">
-      <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-3">
-        <section className="lg:col-span-2">
-          <h1 className="mb-4 text-2xl font-bold text-slate-900">Community Feed</h1>
-          <div className="mb-4 rounded-lg border border-slate-200 bg-white p-4">
-            <p className="mb-3 text-sm text-slate-600">
-              Add Basic Auth credentials to enable post/comment likes and post creation.
-            </p>
-            <div className="grid gap-2 md:grid-cols-3">
-              <input
-                className="rounded border border-slate-300 p-2"
-                placeholder="Username"
-                value={auth.username}
-                onChange={(e) => setAuth((prev) => ({ ...prev, username: e.target.value }))}
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-slate-200 font-sans">
+      {/* Sticky Header with glassmorphism */}
+      <header className="sticky top-0 z-50 border-b border-white/10 bg-slate-900/70 backdrop-blur-md">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 md:px-6">
+          <h1 className="text-xl font-bold tracking-tight text-white">Playto Engine</h1>
+          <div className="relative">
+            <button
+              onClick={() => setAuthDropdownOpen((prev) => !prev)}
+              className="flex items-center gap-2 rounded-lg border border-white/10 bg-slate-800/50 px-4 py-2 text-sm transition-all duration-300 hover:scale-[1.02] hover:bg-slate-800/80"
+            >
+              <span
+                className={`h-2 w-2 rounded-full ${canWrite ? "bg-emerald-500 shadow-lg shadow-emerald-500/50" : "bg-amber-500/80"}`}
               />
-              <input
-                type="password"
-                className="rounded border border-slate-300 p-2"
-                placeholder="Password"
-                value={auth.password}
-                onChange={(e) => setAuth((prev) => ({ ...prev, password: e.target.value }))}
-              />
-              <button
-                className="rounded bg-slate-900 px-4 py-2 text-white hover:bg-slate-700"
-                onClick={loadFeed}
-              >
-                Refresh Feed
-              </button>
-            </div>
+              {canWrite ? "Authenticated" : "Auth"}
+            </button>
+            {authDropdownOpen && (
+              <div className="absolute right-0 top-full mt-2 w-80 rounded-lg border border-white/10 bg-slate-800/95 p-4 shadow-xl backdrop-blur-md">
+                <p className="mb-3 text-xs text-slate-400">
+                  Add Basic Auth credentials to enable post/comment likes and post creation.
+                </p>
+                <div className="space-y-2">
+                  <input
+                    className="w-full rounded-md border border-white/10 bg-slate-900/80 p-2 text-sm text-slate-200 placeholder-slate-500"
+                    placeholder="Username"
+                    value={auth.username}
+                    onChange={(e) => setAuth((prev) => ({ ...prev, username: e.target.value }))}
+                  />
+                  <input
+                    type="password"
+                    className="w-full rounded-md border border-white/10 bg-slate-900/80 p-2 text-sm text-slate-200 placeholder-slate-500"
+                    placeholder="Password"
+                    value={auth.password}
+                    onChange={(e) => setAuth((prev) => ({ ...prev, password: e.target.value }))}
+                  />
+                  <button
+                    className="w-full rounded-md bg-indigo-600 px-3 py-2 text-sm text-white transition-all duration-300 hover:scale-[1.01] hover:bg-indigo-500"
+                    onClick={() => {
+                      loadFeed();
+                      setAuthDropdownOpen(false);
+                    }}
+                  >
+                    Refresh Feed
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
+        </div>
+      </header>
 
-          <form onSubmit={handleCreatePost} className="mb-4 rounded-lg border border-slate-200 bg-white p-4">
-            <textarea
-              className="w-full rounded border border-slate-300 p-2"
-              rows={3}
-              placeholder="Write a post..."
-              value={newPost}
-              onChange={(e) => setNewPost(e.target.value)}
-            />
-            <div className="mt-2 flex items-center justify-between">
-              <span className="text-xs text-slate-500">
-                {canWrite ? "Ready to create post" : "Add auth to create posts"}
-              </span>
-              <button
-                disabled={!canWrite}
-                className="rounded bg-emerald-600 px-4 py-2 text-white disabled:cursor-not-allowed disabled:bg-slate-300"
-                type="submit"
-              >
-                Create Post
-              </button>
-            </div>
-          </form>
+      {/* Main Content - 12 column grid */}
+      <main className="mx-auto max-w-6xl px-4 py-8 md:px-6">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
+          {/* Feed - 8 columns */}
+          <section className="lg:col-span-8">
+            <h2 className="mb-6 text-2xl font-bold text-white">Community Feed</h2>
 
-          {error && <div className="mb-4 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
-          {loading ? (
-            <p className="text-slate-600">Loading feed...</p>
-          ) : (
-            <div className="space-y-4">
-              {posts.map((post) => (
-                <article key={post.id} className="rounded-lg border border-slate-200 bg-white p-4">
-                  <p className="text-sm text-slate-500">by {post.author_username}</p>
-                  <p className="mt-2 text-slate-900">{post.content}</p>
-                  <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-slate-600">
-                    <span>Likes: {post.like_count}</span>
-                    <span>Comments: {post.comment_count}</span>
-                    <button
-                      className="rounded bg-indigo-600 px-3 py-1 text-white hover:bg-indigo-700"
-                      onClick={() => handleLikePost(post)}
-                    >
-                      {post.is_liked_by_me ? "Unlike Post" : "Like Post"}
-                    </button>
-                    <button
-                      className="rounded bg-slate-700 px-3 py-1 text-white hover:bg-slate-800"
-                      onClick={() => togglePostExpand(post.id)}
-                    >
-                      {expandedPosts[post.id] ? "Hide Thread" : "View Thread"}
-                    </button>
-                  </div>
-                  {expandedPosts[post.id] && (
-                    <div className="mt-4">
-                      <form
-                        className="mb-3 flex gap-2"
-                        onSubmit={(e) => {
-                          e.preventDefault();
-                          handleCreateComment(post.id);
-                        }}
+            <form
+              onSubmit={handleCreatePost}
+              className="mb-6 rounded-xl border border-white/10 bg-slate-800/30 p-4 shadow-xl backdrop-blur-sm transition-all duration-300 hover:scale-[1.01]"
+            >
+              <textarea
+                className="w-full rounded-lg border border-white/10 bg-slate-900/60 p-3 text-slate-200 placeholder-slate-500 focus:border-indigo-500/50 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
+                rows={3}
+                placeholder="Write a post..."
+                value={newPost}
+                onChange={(e) => setNewPost(e.target.value)}
+              />
+              <div className="mt-3 flex items-center justify-between">
+                <span className="text-xs text-slate-500">
+                  {canWrite ? "Ready to create post" : "Add auth to create posts"}
+                </span>
+                <button
+                  disabled={!canWrite}
+                  className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-all duration-300 hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
+                  type="submit"
+                >
+                  Create Post
+                </button>
+              </div>
+            </form>
+
+            {error && (
+              <div className="mb-6 rounded-lg border border-red-500/30 bg-red-950/30 p-3 text-sm text-red-300">
+                {error}
+              </div>
+            )}
+
+            {loading ? (
+              <p className="text-slate-400">Loading feed...</p>
+            ) : (
+              <div className="space-y-6">
+                {posts.map((post) => (
+                  <article
+                    key={post.id}
+                    className="rounded-xl border border-white/10 bg-slate-800/30 p-5 shadow-xl backdrop-blur-sm transition-all duration-300 hover:scale-[1.01]"
+                  >
+                    <p className="text-sm text-slate-400">by {post.author_username}</p>
+                    <p className="mt-2 text-slate-100">{post.content}</p>
+                    <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
+                      <span className="text-slate-400">Likes: {post.like_count}</span>
+                      <span className="text-slate-400">Comments: {post.comment_count}</span>
+                      <button
+                        className="rounded-lg bg-indigo-600/80 px-3 py-1.5 text-white transition-all duration-300 hover:scale-[1.05] hover:bg-indigo-500"
+                        onClick={() => handleLikePost(post)}
                       >
-                        <input
-                          className="w-full rounded border border-slate-300 p-2 text-sm"
-                          placeholder="Write a comment..."
-                          value={newCommentByPost[post.id] || ""}
-                          onChange={(e) =>
-                            setNewCommentByPost((prev) => ({
-                              ...prev,
-                              [post.id]: e.target.value
-                            }))
-                          }
-                        />
-                        <button
-                          disabled={!canWrite}
-                          className="rounded bg-emerald-600 px-3 py-2 text-white disabled:cursor-not-allowed disabled:bg-slate-300"
-                          type="submit"
-                        >
-                          Comment
-                        </button>
-                      </form>
-                      {(commentsByPost[post.id] || []).length === 0 ? (
-                        <p className="text-sm text-slate-500">No comments yet.</p>
-                      ) : (
-                        commentsByPost[post.id].map((comment) => (
-                          <CommentNode
-                            key={comment.id}
-                            comment={comment}
-                            onLikeComment={(commentId, isLikedByMe) =>
-                              handleLikeComment(commentId, post.id, isLikedByMe)
-                            }
-                            onReply={(parentId, text) => handleCreateComment(post.id, parentId, text)}
-                            canWrite={canWrite}
-                          />
-                        ))
-                      )}
+                        {post.is_liked_by_me ? "Unlike Post" : "Like Post"}
+                      </button>
+                      <button
+                        className="rounded-lg bg-slate-700/80 px-3 py-1.5 text-slate-200 transition-all duration-300 hover:scale-[1.05] hover:bg-slate-600"
+                        onClick={() => togglePostExpand(post.id)}
+                      >
+                        {expandedPosts[post.id] ? "Hide Thread" : "View Thread"}
+                      </button>
                     </div>
-                  )}
-                </article>
-              ))}
-              {posts.length === 0 && <p className="text-slate-600">No posts yet.</p>}
-            </div>
-          )}
-        </section>
+                    {expandedPosts[post.id] && (
+                      <div className="mt-5">
+                        <form
+                          className="mb-4 flex gap-2"
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            handleCreateComment(post.id);
+                          }}
+                        >
+                          <input
+                            className="w-full rounded-lg border border-white/10 bg-slate-900/60 p-2 text-sm text-slate-200 placeholder-slate-500"
+                            placeholder="Write a comment..."
+                            value={newCommentByPost[post.id] || ""}
+                            onChange={(e) =>
+                              setNewCommentByPost((prev) => ({
+                                ...prev,
+                                [post.id]: e.target.value
+                              }))
+                            }
+                          />
+                          <button
+                            disabled={!canWrite}
+                            className="rounded-lg bg-emerald-600 px-3 py-2 text-sm text-white transition-all duration-300 hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50"
+                            type="submit"
+                          >
+                            Comment
+                          </button>
+                        </form>
+                        {(commentsByPost[post.id] || []).length === 0 ? (
+                          <p className="text-sm text-slate-500">No comments yet.</p>
+                        ) : (
+                          commentsByPost[post.id].map((comment) => (
+                            <CommentNode
+                              key={comment.id}
+                              comment={comment}
+                              onLikeComment={(commentId, isLikedByMe) =>
+                                handleLikeComment(commentId, post.id, isLikedByMe)
+                              }
+                              onReply={(parentId, text) => handleCreateComment(post.id, parentId, text)}
+                              canWrite={canWrite}
+                            />
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </article>
+                ))}
+                {posts.length === 0 && <p className="text-slate-500">No posts yet.</p>}
+              </div>
+            )}
+          </section>
 
-        <aside className="rounded-lg border border-slate-200 bg-white p-4">
-          <h2 className="mb-3 text-xl font-semibold text-slate-900">Top 5 (Last 24h)</h2>
-          <ol className="space-y-2">
-            {leaderboard.map((user, index) => (
-              <li key={user.id} className="flex items-center justify-between rounded bg-slate-50 p-2">
-                <span className="text-sm text-slate-700">
-                  #{index + 1} {user.username}
-                </span>
-                <span className="rounded bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-800">
-                  {user.karma_24h} karma
-                </span>
-              </li>
-            ))}
-          </ol>
-          {leaderboard.length === 0 && <p className="text-sm text-slate-500">No karma in the last 24h yet.</p>}
-        </aside>
-      </div>
+          {/* Leaderboard - 4 columns */}
+          <aside className="lg:col-span-4">
+            <div className="sticky top-24 rounded-xl border border-white/10 bg-slate-800/30 p-5 shadow-xl backdrop-blur-sm">
+              <h2 className="mb-4 text-xl font-bold text-white">Trending</h2>
+              <p className="mb-4 text-xs text-slate-400">Top 5 · Last 24h</p>
+              <ol className="space-y-3">
+                {leaderboard.map((user, index) => {
+                  const rankStyle =
+                    index === 0
+                      ? "bg-amber-500/20 border-amber-400/40 text-amber-200"
+                      : index === 1
+                        ? "bg-slate-400/20 border-slate-300/40 text-slate-200"
+                        : index === 2
+                          ? "bg-amber-700/20 border-amber-600/40 text-amber-300"
+                          : "bg-slate-800/50 border-white/5 text-slate-300";
+                  return (
+                    <li
+                      key={user.id}
+                      className={`flex items-center justify-between rounded-lg border p-3 transition-all duration-300 hover:scale-[1.02] ${rankStyle}`}
+                    >
+                      <span className="text-sm font-medium">
+                        #{index + 1} {user.username}
+                      </span>
+                      <span className="rounded-md bg-indigo-500/20 px-2 py-1 text-xs font-semibold text-indigo-300">
+                        {user.karma_24h} karma
+                      </span>
+                    </li>
+                  );
+                })}
+              </ol>
+              {leaderboard.length === 0 && <p className="text-sm text-slate-500">No karma in the last 24h yet.</p>}
+            </div>
+          </aside>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="mt-16 border-t border-white/10 bg-slate-900/50 py-6">
+        <div className="mx-auto max-w-6xl px-4 text-center text-sm text-slate-500 md:px-6">
+          <p className="font-medium text-slate-400">Tech Stack</p>
+          <p className="mt-1">Django & React</p>
+          <p className="mt-2">Playto Community Feed · Threaded discussions & dynamic Karma leaderboard</p>
+        </div>
+      </footer>
     </div>
   );
 }
