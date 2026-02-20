@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api";
+function getApiBase() {
+  let base = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api";
+  if (base && !base.endsWith("/api")) {
+    base = base.replace(/\/$/, "") + "/api";
+  }
+  return base;
+}
+const API_BASE = getApiBase();
 
 function buildHeaders(auth) {
   const headers = {
@@ -23,6 +30,13 @@ async function apiRequest(path, options = {}, auth = {}) {
 
   if (!response.ok) {
     const text = await response.text();
+    if (text.startsWith("<!") || text.startsWith("<html")) {
+      throw new Error(
+        response.status === 404
+          ? "API not found. Ensure VITE_API_URL points to your backend + '/api'."
+          : `Server error (${response.status}). The backend may be starting up.`
+      );
+    }
     throw new Error(text || `Request failed: ${response.status}`);
   }
   return response.json();
