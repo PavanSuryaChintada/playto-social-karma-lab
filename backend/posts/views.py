@@ -1,3 +1,4 @@
+from django.db import IntegrityError, transaction
 from django.db.models import Count
 from rest_framework.decorators import action
 from rest_framework import mixins, permissions, viewsets
@@ -6,7 +7,7 @@ from rest_framework.response import Response
 from comments.models import Comment
 from comments.serializers import CommentTreeSerializer
 from comments.utils import build_comment_tree
-from .models import Post
+from .models import Post, PostLike
 from .serializers import PostSerializer
 
 
@@ -43,3 +44,38 @@ class PostViewSet(
         roots = build_comment_tree(comments)
         serializer = CommentTreeSerializer(roots, many=True, context={'request': request})
         return Response(serializer.data)
+
+    @action(detail=True, methods=['post'], url_path='like')
+    def like(self, request, pk=None):
+        post = self.get_object()
+
+        try:
+            with transaction.atomic():
+                _, created = PostLike.objects.get_or_create(user=request.user, post=post)
+        except IntegrityError:
+            # Race-safe fallback: if concurrent insert happened, treat as already liked.
+            created = False
+
+        like_count = PostLike.objects.filter(post=post).count()
+        return Response(
+            {
+                'liked': True,
+                'created': created,
+                'post_id': post.id,
+                'like_count': like_count,
+            }
+        )
+
+    @action(detail=True, methods=['delete'], url_path='like')
+    def unlike(self, request, pk=None):
+        post = self.get_object()
+        deleted_count, _ = PostLike.objects.filter(user=request.user, post=post).delete()
+        like_count = PostLike.objects.filter(post=post).count()
+        return Response(
+            {
+                'liked': False,
+                'deleted': deleted_count > 0,
+                'post_id': post.id,
+                'like_count': like_count,
+            }
+        )
