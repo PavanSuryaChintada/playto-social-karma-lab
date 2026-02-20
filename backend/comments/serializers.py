@@ -26,3 +26,32 @@ class CommentSerializer(serializers.ModelSerializer):
         if hasattr(obj, 'like_count'):
             return obj.like_count
         return obj.likes.aggregate(total=Count('id'))['total']
+
+
+class CommentTreeSerializer(serializers.ModelSerializer):
+    author_username = serializers.CharField(source='author.username', read_only=True)
+    like_count = serializers.SerializerMethodField()
+    replies = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Comment
+        fields = [
+            'id',
+            'author',
+            'author_username',
+            'post',
+            'parent',
+            'content',
+            'like_count',
+            'created_at',
+            'replies',
+        ]
+
+    def get_like_count(self, obj):
+        if hasattr(obj, 'like_count'):
+            return obj.like_count
+        return obj.likes.aggregate(total=Count('id'))['total']
+
+    def get_replies(self, obj):
+        children = getattr(obj, '_children', [])
+        return CommentTreeSerializer(children, many=True, context=self.context).data
