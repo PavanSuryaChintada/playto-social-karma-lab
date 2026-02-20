@@ -3,6 +3,7 @@ from django.db import IntegrityError, transaction
 from rest_framework.decorators import action
 from rest_framework import mixins, permissions, viewsets
 from rest_framework.response import Response
+from rest_framework import status
 
 from karma.models import KarmaEvent, SOURCE_COMMENT_LIKE
 from .models import Comment, CommentLike
@@ -37,6 +38,11 @@ class CommentViewSet(
     @action(detail=True, methods=['post'], url_path='like')
     def like(self, request, pk=None):
         comment = self.get_object()
+        if request.user == comment.author:
+            return Response(
+                {'detail': 'Users cannot like their own comment.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         try:
             with transaction.atomic():
                 comment_like, created = CommentLike.objects.get_or_create(user=request.user, comment=comment)
@@ -64,12 +70,19 @@ class CommentViewSet(
     @action(detail=True, methods=['delete'], url_path='like')
     def unlike(self, request, pk=None):
         comment = self.get_object()
-        deleted_count, _ = CommentLike.objects.filter(user=request.user, comment=comment).delete()
+        with transaction.atomic():
+            comment_like = CommentLike.objects.filter(user=request.user, comment=comment).first()
+            if comment_like:
+                # Deleting the like also deletes the linked KarmaEvent via CASCADE.
+                comment_like.delete()
+                deleted = True
+            else:
+                deleted = False
         like_count = CommentLike.objects.filter(comment=comment).count()
         return Response(
             {
                 'liked': False,
-                'deleted': deleted_count > 0,
+                'deleted': deleted,
                 'comment_id': comment.id,
                 'like_count': like_count,
             }

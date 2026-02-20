@@ -3,6 +3,7 @@ from django.db.models import Count
 from rest_framework.decorators import action
 from rest_framework import mixins, permissions, viewsets
 from rest_framework.response import Response
+from rest_framework import status
 
 from comments.models import Comment
 from comments.serializers import CommentTreeSerializer
@@ -51,6 +52,11 @@ class PostViewSet(
     @action(detail=True, methods=['post'], url_path='like')
     def like(self, request, pk=None):
         post = self.get_object()
+        if request.user == post.author:
+            return Response(
+                {'detail': 'Users cannot like their own post.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
             with transaction.atomic():
@@ -80,12 +86,19 @@ class PostViewSet(
     @action(detail=True, methods=['delete'], url_path='like')
     def unlike(self, request, pk=None):
         post = self.get_object()
-        deleted_count, _ = PostLike.objects.filter(user=request.user, post=post).delete()
+        with transaction.atomic():
+            post_like = PostLike.objects.filter(user=request.user, post=post).first()
+            if post_like:
+                # Deleting the like also deletes the linked KarmaEvent via CASCADE.
+                post_like.delete()
+                deleted = True
+            else:
+                deleted = False
         like_count = PostLike.objects.filter(post=post).count()
         return Response(
             {
                 'liked': False,
-                'deleted': deleted_count > 0,
+                'deleted': deleted,
                 'post_id': post.id,
                 'like_count': like_count,
             }
