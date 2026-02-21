@@ -7,6 +7,19 @@
 
 See `README.md` for detailed deployment steps and environment variables.
 
+## Docker (Local)
+
+Run everything with one command:
+
+```bash
+docker compose up --build
+```
+
+- Frontend: http://localhost:5173
+- Backend: http://localhost:8000/api
+
+Sample users and seed data are created automatically on first run.
+
 ## Test Accounts
 
 Use these accounts to log in and explore the live demo (password for all: `SamplePass123!`):

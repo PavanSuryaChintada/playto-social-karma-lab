@@ -14,6 +14,7 @@ COMMENT_LIKE_KARMA_POINTS = 1
 
 class CommentViewSet(
     mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
     mixins.CreateModelMixin,
     viewsets.GenericViewSet,
 ):
@@ -44,9 +45,29 @@ class CommentViewSet(
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
-    @action(detail=True, methods=['post'], url_path='like')
+    @action(detail=True, methods=['post', 'delete'], url_path='like')
     def like(self, request, pk=None):
         comment = self.get_object()
+
+        if request.method == 'DELETE':
+            with transaction.atomic():
+                comment_like = CommentLike.objects.filter(
+                    user=request.user, comment=comment
+                ).first()
+                if comment_like:
+                    comment_like.delete()
+                    deleted = True
+                else:
+                    deleted = False
+            like_count = CommentLike.objects.filter(comment=comment).count()
+            return Response({
+                'liked': False,
+                'deleted': deleted,
+                'comment_id': comment.id,
+                'like_count': like_count,
+            })
+
+        # POST: like
         if request.user == comment.author:
             return Response(
                 {'detail': 'Users cannot like their own comment.'},
@@ -54,7 +75,9 @@ class CommentViewSet(
             )
         try:
             with transaction.atomic():
-                comment_like, created = CommentLike.objects.get_or_create(user=request.user, comment=comment)
+                comment_like, created = CommentLike.objects.get_or_create(
+                    user=request.user, comment=comment
+                )
                 if created:
                     KarmaEvent.objects.create(
                         recipient=comment.author,
@@ -67,32 +90,9 @@ class CommentViewSet(
             created = False
 
         like_count = CommentLike.objects.filter(comment=comment).count()
-        return Response(
-            {
-                'liked': True,
-                'created': created,
-                'comment_id': comment.id,
-                'like_count': like_count,
-            }
-        )
-
-    @action(detail=True, methods=['delete'], url_path='like')
-    def unlike(self, request, pk=None):
-        comment = self.get_object()
-        with transaction.atomic():
-            comment_like = CommentLike.objects.filter(user=request.user, comment=comment).first()
-            if comment_like:
-                # Deleting the like also deletes the linked KarmaEvent via CASCADE.
-                comment_like.delete()
-                deleted = True
-            else:
-                deleted = False
-        like_count = CommentLike.objects.filter(comment=comment).count()
-        return Response(
-            {
-                'liked': False,
-                'deleted': deleted,
-                'comment_id': comment.id,
-                'like_count': like_count,
-            }
-        )
+        return Response({
+            'liked': True,
+            'created': created,
+            'comment_id': comment.id,
+            'like_count': like_count,
+        })

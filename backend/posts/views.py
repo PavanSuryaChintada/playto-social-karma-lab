@@ -70,18 +70,39 @@ class PostViewSet(
         serializer = CommentTreeSerializer(roots, many=True, context={'request': request})
         return Response(serializer.data)
 
-    @action(detail=True, methods=['post'], url_path='like')
+    @action(detail=True, methods=['post', 'delete'], url_path='like')
     def like(self, request, pk=None):
         post = self.get_object()
+
+        if request.method == 'DELETE':
+            with transaction.atomic():
+                post_like = PostLike.objects.filter(
+                    user=request.user, post=post
+                ).first()
+                if post_like:
+                    post_like.delete()
+                    deleted = True
+                else:
+                    deleted = False
+            like_count = PostLike.objects.filter(post=post).count()
+            return Response({
+                'liked': False,
+                'deleted': deleted,
+                'post_id': post.id,
+                'like_count': like_count,
+            })
+
+        # POST: like
         if request.user == post.author:
             return Response(
                 {'detail': 'Users cannot like their own post.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
         try:
             with transaction.atomic():
-                post_like, created = PostLike.objects.get_or_create(user=request.user, post=post)
+                post_like, created = PostLike.objects.get_or_create(
+                    user=request.user, post=post
+                )
                 if created:
                     KarmaEvent.objects.create(
                         recipient=post.author,
@@ -91,36 +112,12 @@ class PostViewSet(
                         source_post_like=post_like,
                     )
         except IntegrityError:
-            # Race-safe fallback: if concurrent insert happened, treat as already liked.
             created = False
 
         like_count = PostLike.objects.filter(post=post).count()
-        return Response(
-            {
-                'liked': True,
-                'created': created,
-                'post_id': post.id,
-                'like_count': like_count,
-            }
-        )
-
-    @action(detail=True, methods=['delete'], url_path='like')
-    def unlike(self, request, pk=None):
-        post = self.get_object()
-        with transaction.atomic():
-            post_like = PostLike.objects.filter(user=request.user, post=post).first()
-            if post_like:
-                # Deleting the like also deletes the linked KarmaEvent via CASCADE.
-                post_like.delete()
-                deleted = True
-            else:
-                deleted = False
-        like_count = PostLike.objects.filter(post=post).count()
-        return Response(
-            {
-                'liked': False,
-                'deleted': deleted,
-                'post_id': post.id,
-                'like_count': like_count,
-            }
-        )
+        return Response({
+            'liked': True,
+            'created': created,
+            'post_id': post.id,
+            'like_count': like_count,
+        })
